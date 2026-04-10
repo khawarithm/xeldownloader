@@ -3,221 +3,242 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Downloader Pro+</title>
+<title>🔥 Universal Downloader</title>
 
 <style>
-*{box-sizing:border-box;font-family:sans-serif}
-body{
+body {
   margin:0;
-  background:linear-gradient(135deg,#0f172a,#1e293b);
+  font-family: sans-serif;
+  background:#0f172a;
   color:white;
   display:flex;
   justify-content:center;
   align-items:center;
-  min-height:100vh;
+  height:100vh;
 }
-.container{
+
+.box {
   width:95%;
   max-width:420px;
-  background:rgba(30,41,59,0.85);
+  background:#1e293b;
   padding:20px;
-  border-radius:20px;
-  backdrop-filter:blur(10px);
+  border-radius:15px;
 }
-h1{text-align:center;font-size:22px}
-input,select,button{
+
+h2 { text-align:center; }
+
+input, select, button {
   width:100%;
   padding:12px;
   margin-top:10px;
-  border-radius:12px;
+  border-radius:10px;
   border:none;
 }
-input,select{background:#0f172a;color:white}
-button{background:#38bdf8;font-weight:bold;cursor:pointer}
-#status{text-align:center;margin-top:10px;font-size:14px}
 
-.preview{margin-top:15px;display:none}
-.preview img{width:100%;border-radius:12px}
-.actions a{
-  display:block;
-  margin-top:8px;
+button {
   background:#22c55e;
-  padding:10px;
+  font-weight:bold;
+}
+
+.preview img {
+  width:100%;
   border-radius:10px;
-  text-align:center;
-  color:white;
-  text-decoration:none;
+  margin-top:10px;
 }
-.loader{
-  border:4px solid #1e293b;
-  border-top:4px solid #38bdf8;
-  border-radius:50%;
-  width:30px;height:30px;
-  animation:spin 1s linear infinite;
-  margin:10px auto;
-  display:none;
+
+.progress {
+  height:8px;
+  background:#334155;
+  margin-top:10px;
+  border-radius:10px;
+  overflow:hidden;
 }
-@keyframes spin{100%{transform:rotate(360deg)}}
+
+.bar {
+  height:100%;
+  width:0%;
+  background:#22c55e;
+}
+
+.log {
+  font-size:12px;
+  margin-top:10px;
+  color:#94a3b8;
+}
 </style>
 </head>
+
 <body>
 
-<div class="container">
-  <h1>Downloader Pro+</h1>
+<div class="box">
+  <h2>🔥 Downloader Pro</h2>
 
-  <input id="url" placeholder="Paste link TikTok / YouTube">
+  <input id="url" placeholder="Paste TikTok / YouTube link">
 
-  <select id="type">
-    <option value="mp4_hd">MP4 HD</option>
+  <select id="format">
     <option value="mp4">MP4 Normal</option>
+    <option value="mp4hd">MP4 HD</option>
     <option value="mp3">MP3</option>
   </select>
 
-  <button onclick="download()">Download</button>
+  <button onclick="start()">DOWNLOAD</button>
 
-  <div class="loader" id="loader"></div>
-  <p id="status"></p>
+  <div class="preview" id="preview"></div>
 
-  <div class="preview" id="preview">
-    <img id="thumb">
-    <h3 id="title"></h3>
-    <div class="actions">
-      <a id="dlbtn" target="_blank">Download</a>
-    </div>
+  <div class="progress">
+    <div class="bar" id="bar"></div>
   </div>
+
+  <div class="log" id="log"></div>
 </div>
 
 <script>
-async function download(){
-  const url=document.getElementById("url").value;
-  const type=document.getElementById("type").value;
-  const status=document.getElementById("status");
-  const loader=document.getElementById("loader");
+const log = (txt) => {
+  document.getElementById("log").innerHTML = txt;
+}
 
-  const preview=document.getElementById("preview");
-  const thumb=document.getElementById("thumb");
-  const title=document.getElementById("title");
-  const dlbtn=document.getElementById("dlbtn");
+/* ================= DOWNLOAD ENGINE ================= */
+async function directDownload(url, filename) {
+  const res = await fetch(url);
+  const reader = res.body.getReader();
+  const total = +res.headers.get('Content-Length');
+  let received = 0;
+  let chunks = [];
 
-  if(!url)return alert("Masukkan link!");
+  while(true) {
+    const {done, value} = await reader.read();
+    if(done) break;
 
-  loader.style.display="block";
-  preview.style.display="none";
-  status.innerText="Processing...";
+    chunks.push(value);
+    received += value.length;
 
-  const isYT=url.includes("youtube")||url.includes("youtu.be");
-
-  let link=null,judul="",gambar="";
-
-  try{
-
-    // ================= YOUTUBE =================
-    if(isYT){
-      const apis=[
-        `https://api.sxtream.my.id/downloader/ytmp3?url=${encodeURIComponent(url)}`,
-        `https://api.sxtream.my.id/downloader/ytmp4?url=${encodeURIComponent(url)}`
-      ];
-
-      for(let api of apis){
-        try{
-          const res=await fetch(api);
-          const data=await res.json();
-
-          if(data.result?.url){
-            link=data.result.url;
-            judul=data.result.title;
-            break;
-          }
-        }catch{}
-      }
-    }
-
-    // ================= TIKTOK =================
-    else{
-
-      // 🥇 SIPUTZX PRIORITY
-      try{
-        const res=await fetch(`https://api.siputzx.my.id/api/d/tiktok?url=${encodeURIComponent(url)}`);
-        const data=await res.json();
-
-        if(data.status){
-          judul=data.data.text;
-          gambar=data.data.cover_link;
-
-          if(type==="mp3") link=data.data.music_link;
-          if(type==="mp4") link=data.data.no_watermark_link;
-          if(type==="mp4_hd") link=data.data.no_watermark_link_hd;
-
-          if(link){
-            loader.style.display="none";
-            status.innerText="Sukses (SiputZX)";
-            thumb.src=gambar;
-            title.innerText=judul;
-            dlbtn.href=link;
-            preview.style.display="block";
-            return;
-          }
-        }
-      }catch{}
-
-      // 🥈 FALLBACK API LAMA
-      const apis=[
-        `https://api.sxtream.my.id/downloader/tiktok?url=${encodeURIComponent(url)}`,
-        `https://chocomilk.amira.us.kg/v1/download/tiktok?url=${encodeURIComponent(url)}`
-      ];
-
-      for(let api of apis){
-        try{
-          const res=await fetch(api);
-          const data=await res.json();
-
-          if(data.result){
-            judul=data.result.title;
-            gambar=data.result.cover;
-
-            if(type==="mp3" && data.result.music_info?.url){
-              link=data.result.music_info.url; break;
-            }
-
-            if(data.result.data){
-              for(let v of data.result.data){
-                if(type==="mp4_hd" && v.type==="nowatermark_hd"){link=v.url;break;}
-                if(type==="mp4" && v.type==="nowatermark"){link=v.url;break;}
-              }
-            }
-          }
-
-          if(data.data?.media){
-            judul=data.data.metadata?.title;
-            gambar=data.data.metadata?.thumbnail;
-
-            if(type==="mp3") link=data.data.media.audio;
-            else link=data.data.media.video;
-
-            break;
-          }
-
-        }catch{}
-      }
-    }
-
-    loader.style.display="none";
-
-    if(!link){
-      status.innerText="Gagal semua API 😢";
-      return;
-    }
-
-    status.innerText="Siap didownload!";
-    thumb.src=gambar||"";
-    title.innerText=judul||"File ditemukan";
-    dlbtn.href=link;
-    preview.style.display="block";
-
-  }catch(e){
-    loader.style.display="none";
-    status.innerText="Error!";
+    let percent = Math.floor((received / total) * 100);
+    document.getElementById("bar").style.width = percent + "%";
   }
+
+  const blob = new Blob(chunks);
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+/* ================= MAIN ================= */
+async function start() {
+  const url = document.getElementById("url").value;
+  const format = document.getElementById("format").value;
+
+  document.getElementById("bar").style.width = "0%";
+  document.getElementById("preview").innerHTML = "";
+
+  try {
+    if(url.includes("tiktok")) {
+      await tiktok(url, format);
+    } else if(url.includes("youtu")) {
+      await youtube(url, format);
+    } else {
+      log("❌ Link tidak didukung");
+    }
+  } catch(e) {
+    log("❌ Semua API gagal");
+  }
+}
+
+/* ================= TIKTOK ================= */
+async function tiktok(url, format) {
+
+  const apis = [
+    `https://api.siputzx.my.id/api/d/tiktok?url=${url}`,
+    `https://api.sxtream.my.id/downloader/tiktok?url=${url}`,
+    `https://chocomilk.amira.us.kg/v1/download/tiktok?url=${url}`
+  ];
+
+  for (let api of apis) {
+    try {
+      log("🔄 Try: " + api);
+
+      let res = await fetch(api);
+      let json = await res.json();
+
+      let data = json.data || json;
+
+      let video =
+        data.no_watermark_link_hd ||
+        data.no_watermark_link ||
+        data.media?.video;
+
+      let audio =
+        data.music_link ||
+        data.media?.audio;
+
+      let thumb =
+        data.cover_link ||
+        data.metadata?.thumbnail;
+
+      document.getElementById("preview").innerHTML =
+        `<img src="${thumb}">`;
+
+      let final;
+
+      if(format === "mp4") final = video;
+      else if(format === "mp4hd") final = video;
+      else final = audio;
+
+      try {
+        await directDownload(final, "tiktok");
+      } catch {
+        window.location.href = final;
+      }
+
+      log("✅ Success pakai API ini");
+      return;
+
+    } catch(err) {
+      continue;
+    }
+  }
+
+  throw "fail";
+}
+
+/* ================= YOUTUBE ================= */
+async function youtube(url, format) {
+
+  const apis = [
+    `https://api.sxtream.my.id/downloader/ytmp4?url=${url}`,
+    `https://api.sxtream.my.id/downloader/ytmp3?url=${url}`,
+    `https://chocomilk.amira.us.kg/v1/youtube/download?url=${url}&quality=720&mode=video`
+  ];
+
+  for (let api of apis) {
+    try {
+      log("🔄 Try: " + api);
+
+      let res = await fetch(api);
+      let json = await res.json();
+
+      let link =
+        json.data?.download ||
+        json.data?.url ||
+        json.result?.url;
+
+      if(!link) continue;
+
+      try {
+        await directDownload(link, "youtube");
+      } catch {
+        window.location.href = link;
+      }
+
+      log("✅ Success YouTube");
+      return;
+
+    } catch(err) {
+      continue;
+    }
+  }
+
+  throw "fail";
 }
 </script>
 
