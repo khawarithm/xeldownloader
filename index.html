@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🔥 Universal Downloader</title>
+<title>Downloader Pro Max</title>
 
 <style>
 body {
   margin:0;
-  font-family: sans-serif;
+  font-family:sans-serif;
   background:#0f172a;
   color:white;
   display:flex;
@@ -24,8 +24,6 @@ body {
   padding:20px;
   border-radius:15px;
 }
-
-h2 { text-align:center; }
 
 input, select, button {
   width:100%;
@@ -71,7 +69,7 @@ button {
 <body>
 
 <div class="box">
-  <h2>🔥 Downloader Pro</h2>
+  <h2>🔥 Downloader Fix Anti Zonk</h2>
 
   <input id="url" placeholder="Paste TikTok / YouTube link">
 
@@ -93,15 +91,22 @@ button {
 </div>
 
 <script>
-const log = (txt) => {
-  document.getElementById("log").innerHTML = txt;
-}
+const log = (t) => document.getElementById("log").innerHTML = t;
 
-/* ================= DOWNLOAD ENGINE ================= */
-async function directDownload(url, filename) {
+/* ================= VALID DOWNLOAD ================= */
+async function safeDownload(url, filename) {
   const res = await fetch(url);
+
+  const type = res.headers.get("content-type") || "";
+
+  // ❗ BLOCK kalau bukan file
+  if (!res.ok || type.includes("text")) {
+    throw "INVALID FILE";
+  }
+
+  const total = +res.headers.get("content-length");
   const reader = res.body.getReader();
-  const total = +res.headers.get('Content-Length');
+
   let received = 0;
   let chunks = [];
 
@@ -112,12 +117,15 @@ async function directDownload(url, filename) {
     chunks.push(value);
     received += value.length;
 
-    let percent = Math.floor((received / total) * 100);
-    document.getElementById("bar").style.width = percent + "%";
+    if(total) {
+      let percent = Math.floor((received / total) * 100);
+      document.getElementById("bar").style.width = percent + "%";
+    }
   }
 
   const blob = new Blob(chunks);
   const link = document.createElement("a");
+
   link.href = URL.createObjectURL(blob);
   link.download = filename;
   link.click();
@@ -137,9 +145,9 @@ async function start() {
     } else if(url.includes("youtu")) {
       await youtube(url, format);
     } else {
-      log("❌ Link tidak didukung");
+      log("❌ Link tidak support");
     }
-  } catch(e) {
+  } catch {
     log("❌ Semua API gagal");
   }
 }
@@ -149,51 +157,50 @@ async function tiktok(url, format) {
 
   const apis = [
     `https://api.siputzx.my.id/api/d/tiktok?url=${url}`,
-    `https://api.sxtream.my.id/downloader/tiktok?url=${url}`,
     `https://chocomilk.amira.us.kg/v1/download/tiktok?url=${url}`
   ];
 
   for (let api of apis) {
     try {
-      log("🔄 Try: " + api);
+      log("🔄 Ambil dari API...");
 
       let res = await fetch(api);
       let json = await res.json();
+      let d = json.data || json;
 
-      let data = json.data || json;
+      let video = d.no_watermark_link_hd || d.no_watermark_link || d.media?.video;
+      let audio = d.music_link || d.media?.audio;
+      let thumb = d.cover_link || d.metadata?.thumbnail;
 
-      let video =
-        data.no_watermark_link_hd ||
-        data.no_watermark_link ||
-        data.media?.video;
-
-      let audio =
-        data.music_link ||
-        data.media?.audio;
-
-      let thumb =
-        data.cover_link ||
-        data.metadata?.thumbnail;
-
-      document.getElementById("preview").innerHTML =
-        `<img src="${thumb}">`;
+      if(thumb) {
+        document.getElementById("preview").innerHTML = `<img src="${thumb}">`;
+      }
 
       let final;
 
-      if(format === "mp4") final = video;
-      else if(format === "mp4hd") final = video;
-      else final = audio;
-
-      try {
-        await directDownload(final, "tiktok");
-      } catch {
-        window.location.href = final;
+      if(format === "mp3") {
+        if(!audio) throw "no audio";
+        final = audio;
+      }
+      else if(format === "mp4hd") {
+        final = d.no_watermark_link_hd || video;
+      }
+      else {
+        final = video;
       }
 
-      log("✅ Success pakai API ini");
+      if(!final || final.includes("undefined")) throw "bad link";
+
+      try {
+        await safeDownload(final, "tiktok." + (format==="mp3"?"mp3":"mp4"));
+      } catch {
+        window.open(final, "_blank");
+      }
+
+      log("✅ Berhasil!");
       return;
 
-    } catch(err) {
+    } catch(e) {
       continue;
     }
   }
@@ -205,14 +212,15 @@ async function tiktok(url, format) {
 async function youtube(url, format) {
 
   const apis = [
-    `https://api.sxtream.my.id/downloader/ytmp4?url=${url}`,
-    `https://api.sxtream.my.id/downloader/ytmp3?url=${url}`,
-    `https://chocomilk.amira.us.kg/v1/youtube/download?url=${url}&quality=720&mode=video`
+    format === "mp3"
+      ? `https://api.sxtream.my.id/downloader/ytmp3?url=${url}`
+      : `https://api.sxtream.my.id/downloader/ytmp4?url=${url}`,
+    `https://chocomilk.amira.us.kg/v1/youtube/download?url=${url}&quality=720&mode=${format==="mp3"?"audio":"video"}`
   ];
 
   for (let api of apis) {
     try {
-      log("🔄 Try: " + api);
+      log("🔄 Ambil YouTube...");
 
       let res = await fetch(api);
       let json = await res.json();
@@ -222,18 +230,18 @@ async function youtube(url, format) {
         json.data?.url ||
         json.result?.url;
 
-      if(!link) continue;
+      if(!link) throw "no link";
 
       try {
-        await directDownload(link, "youtube");
+        await safeDownload(link, "youtube." + (format==="mp3"?"mp3":"mp4"));
       } catch {
-        window.location.href = link;
+        window.open(link, "_blank");
       }
 
-      log("✅ Success YouTube");
+      log("✅ YouTube berhasil!");
       return;
 
-    } catch(err) {
+    } catch {
       continue;
     }
   }
