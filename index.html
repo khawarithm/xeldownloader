@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TikTok Downloader</title>
+<title>TikTok Downloader Pro</title>
 
 <style>
 body {
@@ -50,6 +50,7 @@ button {
   <select id="type">
     <option value="hd">MP4 HD</option>
     <option value="normal">MP4 Normal</option>
+    <option value="mp3">MP3</option>
   </select>
 
   <button onclick="download()">Download</button>
@@ -68,40 +69,78 @@ async function download() {
     return;
   }
 
-  status.innerText = "Mengambil data...";
+  status.innerText = "Mengambil dari API...";
 
-  try {
-    const api = `https://api.sxtream.my.id/downloader/tiktok?url=${encodeURIComponent(url)}`;
-    const res = await fetch(api);
-    const data = await res.json();
+  // 🔥 LIST API (fallback)
+  const apis = [
+    `https://api.sxtream.my.id/downloader/tiktok?url=${encodeURIComponent(url)}`,
+    `https://api.sxtream.my.id/downloader/aio-v2?url=${encodeURIComponent(url)}`,
+    `https://chocomilk.amira.us.kg/v1/download/tiktok?url=${encodeURIComponent(url)}`
+  ];
 
-    const list = data.result.data;
+  let downloadLink = null;
 
-    let downloadLink = null;
+  for (let api of apis) {
+    try {
+      const res = await fetch(api);
+      const data = await res.json();
 
-    for (let i = 0; i < list.length; i++) {
-      if (type === "hd" && list[i].type === "nowatermark_hd") {
-        downloadLink = list[i].url;
+      console.log("API RESULT:", data);
+
+      // =====================
+      // ✅ API 1 & 2 (SXTREAM)
+      // =====================
+      if (data.result) {
+
+        // MP3
+        if (type === "mp3" && data.result.music_info?.url) {
+          downloadLink = data.result.music_info.url;
+        }
+
+        // MP4
+        if (data.result.data) {
+          for (let item of data.result.data) {
+            if (type === "hd" && item.type === "nowatermark_hd") {
+              downloadLink = item.url;
+            }
+            if (type === "normal" && item.type === "nowatermark") {
+              downloadLink = item.url;
+            }
+          }
+        }
       }
-      if (type === "normal" && list[i].type === "nowatermark") {
-        downloadLink = list[i].url;
+
+      // =====================
+      // ✅ API 3 (CHOCOMILK)
+      // =====================
+      if (data.data && data.data.media) {
+
+        if (type === "mp3" && data.data.media.audio) {
+          downloadLink = data.data.media.audio;
+        }
+
+        if (type === "hd" || type === "normal") {
+          downloadLink = data.data.media.video;
+        }
       }
+
+      // 🔥 kalau udah dapet langsung stop
+      if (downloadLink) break;
+
+    } catch (e) {
+      console.log("API ERROR:", e);
     }
-
-    if (!downloadLink) {
-      status.innerText = "Link tidak ditemukan!";
-      return;
-    }
-
-    status.innerText = "Redirecting...";
-
-    // 🚀 langsung redirect ke file mp4
-    window.location.href = downloadLink;
-
-  } catch (err) {
-    console.log(err);
-    status.innerText = "Terjadi error!";
   }
+
+  if (!downloadLink) {
+    status.innerText = "Semua API gagal 😢";
+    return;
+  }
+
+  status.innerText = "Redirecting...";
+
+  // 🚀 langsung download
+  window.location.href = downloadLink;
 }
 </script>
 
