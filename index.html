@@ -35,6 +35,7 @@ input, select, button {
 button {
   background: #38bdf8;
   font-weight: bold;
+  cursor: pointer;
 }
 
 </style>
@@ -47,8 +48,8 @@ button {
   <input type="text" id="url" placeholder="Masukkan link TikTok">
 
   <select id="type">
-    <option value="mp4">MP4 (Video)</option>
-    <option value="mp3">MP3 (Audio)</option>
+    <option value="hd">MP4 HD</option>
+    <option value="normal">MP4 Normal</option>
   </select>
 
   <button onclick="download()">Download</button>
@@ -74,20 +75,17 @@ async function download() {
     const res = await fetch(api);
     const data = await res.json();
 
-    console.log(data); // penting buat cek struktur asli
+    const list = data.result.data;
 
-    // ⚠️ INI BAGIAN PENTING (sesuaikan response API kamu)
-    let downloadLink;
+    let downloadLink = null;
 
-    if (type === "mp4") {
-      downloadLink =
-        data.result?.video ||
-        data.result?.nowm ||
-        data.result?.play;
-    } else {
-      downloadLink =
-        data.result?.music ||
-        data.result?.audio;
+    for (let i = 0; i < list.length; i++) {
+      if (type === "hd" && list[i].type === "nowatermark_hd") {
+        downloadLink = list[i].url;
+      }
+      if (type === "normal" && list[i].type === "nowatermark") {
+        downloadLink = list[i].url;
+      }
     }
 
     if (!downloadLink) {
@@ -97,12 +95,12 @@ async function download() {
 
     status.innerText = "Redirecting...";
 
-    // 🚀 langsung redirect download
+    // 🚀 langsung redirect ke file mp4
     window.location.href = downloadLink;
 
   } catch (err) {
     console.log(err);
-    status.innerText = "Error mengambil data!";
+    status.innerText = "Terjadi error!";
   }
 }
 </script>
