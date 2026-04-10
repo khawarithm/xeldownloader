@@ -3,75 +3,150 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Downloader Pro Max</title>
+<title>Downloader Aesthetic</title>
 
 <style>
-body {
+* {
   margin:0;
+  padding:0;
+  box-sizing:border-box;
   font-family:sans-serif;
-  background:#0f172a;
-  color:white;
+}
+
+body {
+  height:100vh;
   display:flex;
   justify-content:center;
   align-items:center;
-  height:100vh;
+  background: linear-gradient(-45deg, #0f172a, #1e293b, #020617, #0f172a);
+  background-size: 400% 400%;
+  animation: bgMove 10s infinite alternate;
+  overflow:hidden;
 }
 
+@keyframes bgMove {
+  0% { background-position:0% 50%; }
+  100% { background-position:100% 50%; }
+}
+
+/* floating blobs */
+.blob {
+  position:absolute;
+  border-radius:50%;
+  filter: blur(80px);
+  opacity:0.4;
+  animation: float 10s infinite alternate;
+}
+
+.blob1 {
+  width:300px;
+  height:300px;
+  background:#22c55e;
+  top:10%;
+  left:10%;
+}
+
+.blob2 {
+  width:250px;
+  height:250px;
+  background:#3b82f6;
+  bottom:10%;
+  right:10%;
+}
+
+@keyframes float {
+  0% { transform:translateY(0); }
+  100% { transform:translateY(-40px); }
+}
+
+/* card */
 .box {
-  width:95%;
-  max-width:420px;
-  background:#1e293b;
-  padding:20px;
-  border-radius:15px;
+  position:relative;
+  z-index:10;
+  width:90%;
+  max-width:400px;
+  padding:25px;
+  border-radius:20px;
+  backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.05);
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  text-align:center;
+  animation: fadeIn 1s ease;
 }
 
+@keyframes fadeIn {
+  from {opacity:0; transform:translateY(20px);}
+  to {opacity:1;}
+}
+
+h2 {
+  margin-bottom:15px;
+}
+
+/* input */
 input, select, button {
   width:100%;
   padding:12px;
   margin-top:10px;
-  border-radius:10px;
+  border-radius:12px;
   border:none;
+  outline:none;
 }
 
+/* button */
 button {
-  background:#22c55e;
+  background: linear-gradient(45deg, #22c55e, #4ade80);
+  color:black;
   font-weight:bold;
+  transition:0.3s;
 }
 
+button:hover {
+  transform:scale(1.05);
+}
+
+/* preview */
 .preview img {
   width:100%;
-  border-radius:10px;
-  margin-top:10px;
+  border-radius:15px;
+  margin-top:15px;
+  animation: fadeIn 0.5s ease;
 }
 
-.progress {
-  height:8px;
-  background:#334155;
-  margin-top:10px;
-  border-radius:10px;
-  overflow:hidden;
+/* loading spinner */
+.loader {
+  margin-top:15px;
+  border:4px solid #334155;
+  border-top:4px solid #22c55e;
+  border-radius:50%;
+  width:40px;
+  height:40px;
+  animation: spin 1s linear infinite;
+  display:none;
 }
 
-.bar {
-  height:100%;
-  width:0%;
-  background:#22c55e;
+@keyframes spin {
+  100% { transform:rotate(360deg); }
 }
 
+/* log */
 .log {
-  font-size:12px;
   margin-top:10px;
-  color:#94a3b8;
+  font-size:12px;
+  opacity:0.7;
 }
 </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h2>🔥 Downloader Fix Anti Zonk</h2>
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
 
-  <input id="url" placeholder="Paste TikTok / YouTube link">
+<div class="box">
+  <h2>🔥 TikTok Downloader</h2>
+
+  <input id="url" placeholder="Paste link TikTok...">
 
   <select id="format">
     <option value="mp4">MP4 Normal</option>
@@ -79,81 +154,45 @@ button {
     <option value="mp3">MP3</option>
   </select>
 
-  <button onclick="start()">DOWNLOAD</button>
+  <button onclick="start()">Download</button>
+
+  <div class="loader" id="loader"></div>
 
   <div class="preview" id="preview"></div>
-
-  <div class="progress">
-    <div class="bar" id="bar"></div>
-  </div>
-
   <div class="log" id="log"></div>
 </div>
 
 <script>
 const log = (t) => document.getElementById("log").innerHTML = t;
 
-/* ================= VALID DOWNLOAD ================= */
-async function safeDownload(url, filename) {
-  const res = await fetch(url);
+async function smartDownload(url, filename) {
+  try {
+    const res = await fetch(url);
+    const type = res.headers.get("content-type") || "";
 
-  const type = res.headers.get("content-type") || "";
+    if (!res.ok || type.includes("text")) throw "bad";
 
-  // ❗ BLOCK kalau bukan file
-  if (!res.ok || type.includes("text")) {
-    throw "INVALID FILE";
+    const blob = await res.blob();
+
+    if(blob.size < 50000) throw "fake";
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+
+  } catch {
+    window.open(url, "_blank");
   }
-
-  const total = +res.headers.get("content-length");
-  const reader = res.body.getReader();
-
-  let received = 0;
-  let chunks = [];
-
-  while(true) {
-    const {done, value} = await reader.read();
-    if(done) break;
-
-    chunks.push(value);
-    received += value.length;
-
-    if(total) {
-      let percent = Math.floor((received / total) * 100);
-      document.getElementById("bar").style.width = percent + "%";
-    }
-  }
-
-  const blob = new Blob(chunks);
-  const link = document.createElement("a");
-
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
 }
 
-/* ================= MAIN ================= */
 async function start() {
   const url = document.getElementById("url").value;
   const format = document.getElementById("format").value;
 
-  document.getElementById("bar").style.width = "0%";
+  document.getElementById("loader").style.display = "block";
   document.getElementById("preview").innerHTML = "";
-
-  try {
-    if(url.includes("tiktok")) {
-      await tiktok(url, format);
-    } else if(url.includes("youtu")) {
-      await youtube(url, format);
-    } else {
-      log("❌ Link tidak support");
-    }
-  } catch {
-    log("❌ Semua API gagal");
-  }
-}
-
-/* ================= TIKTOK ================= */
-async function tiktok(url, format) {
+  log("⏳ Loading...");
 
   const apis = [
     `https://api.siputzx.my.id/api/d/tiktok?url=${url}`,
@@ -162,8 +201,6 @@ async function tiktok(url, format) {
 
   for (let api of apis) {
     try {
-      log("🔄 Ambil dari API...");
-
       let res = await fetch(api);
       let json = await res.json();
       let d = json.data || json;
@@ -172,32 +209,23 @@ async function tiktok(url, format) {
       let audio = d.music_link || d.media?.audio;
       let thumb = d.cover_link || d.metadata?.thumbnail;
 
-      if(thumb) {
-        document.getElementById("preview").innerHTML = `<img src="${thumb}">`;
+      if(thumb){
+        document.getElementById("preview").innerHTML =
+          `<img src="${thumb}">`;
       }
 
       let final;
 
-      if(format === "mp3") {
-        if(!audio) throw "no audio";
-        final = audio;
-      }
-      else if(format === "mp4hd") {
-        final = d.no_watermark_link_hd || video;
-      }
-      else {
-        final = video;
-      }
+      if(format === "mp3") final = audio;
+      else if(format === "mp4hd") final = d.no_watermark_link_hd || video;
+      else final = video;
 
-      if(!final || final.includes("undefined")) throw "bad link";
+      if(!final) throw "no link";
 
-      try {
-        await safeDownload(final, "tiktok." + (format==="mp3"?"mp3":"mp4"));
-      } catch {
-        window.open(final, "_blank");
-      }
+      await smartDownload(final, "tiktok");
 
-      log("✅ Berhasil!");
+      log("✅ Download berhasil");
+      document.getElementById("loader").style.display = "none";
       return;
 
     } catch(e) {
@@ -205,48 +233,8 @@ async function tiktok(url, format) {
     }
   }
 
-  throw "fail";
-}
-
-/* ================= YOUTUBE ================= */
-async function youtube(url, format) {
-
-  const apis = [
-    format === "mp3"
-      ? `https://api.sxtream.my.id/downloader/ytmp3?url=${url}`
-      : `https://api.sxtream.my.id/downloader/ytmp4?url=${url}`,
-    `https://chocomilk.amira.us.kg/v1/youtube/download?url=${url}&quality=720&mode=${format==="mp3"?"audio":"video"}`
-  ];
-
-  for (let api of apis) {
-    try {
-      log("🔄 Ambil YouTube...");
-
-      let res = await fetch(api);
-      let json = await res.json();
-
-      let link =
-        json.data?.download ||
-        json.data?.url ||
-        json.result?.url;
-
-      if(!link) throw "no link";
-
-      try {
-        await safeDownload(link, "youtube." + (format==="mp3"?"mp3":"mp4"));
-      } catch {
-        window.open(link, "_blank");
-      }
-
-      log("✅ YouTube berhasil!");
-      return;
-
-    } catch {
-      continue;
-    }
-  }
-
-  throw "fail";
+  log("❌ Gagal ambil video");
+  document.getElementById("loader").style.display = "none";
 }
 </script>
 
