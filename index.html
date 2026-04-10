@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>TikTok Downloader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 15px;
+      font-size: 22px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #38bdf8;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #0ea5e9;
+    }
+
+    .loading {
+      margin-top: 10px;
+      display: none;
+    }
+
+    .result {
+      margin-top: 15px;
+      display: none;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    a.download-btn {
+      display: block;
+      margin-top: 10px;
+      background: #22c55e;
+      padding: 10px;
+      border-radius: 10px;
+      color: white;
+      text-decoration: none;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>TikTok Downloader</h1>
+  
+  <input type="text" id="url" placeholder="Masukkan link TikTok...">
+  <button onclick="download()">Download</button>
+
+  <div class="loading" id="loading">Loading...</div>
+
+  <div class="result" id="result">
+    <p id="title"></p>
+    <video id="video" controls></video>
+    <a id="downloadLink" class="download-btn" download>Download Video</a>
+  </div>
+</div>
+
+<script>
+async function download() {
+  const urlInput = document.getElementById("url").value;
+  const loading = document.getElementById("loading");
+  const result = document.getElementById("result");
+
+  if (!urlInput) {
+    alert("Masukkan link dulu!");
+    return;
+  }
+
+  loading.style.display = "block";
+  result.style.display = "none";
+
+  try {
+    const api = `https://api.sxtream.my.id/downloader/tiktok?url=${encodeURIComponent(urlInput)}`;
+    const res = await fetch(api);
+    const data = await res.json();
+
+    loading.style.display = "none";
+
+    // sesuaikan dengan struktur response API
+    const videoUrl = data.result?.video || data.result?.nowm || data.result?.play;
+
+    if (!videoUrl) {
+      alert("Gagal ambil video!");
+      return;
+    }
+
+    document.getElementById("video").src = videoUrl;
+    document.getElementById("downloadLink").href = videoUrl;
+    document.getElementById("title").innerText = data.result?.title || "Video TikTok";
+
+    result.style.display = "block";
+
+  } catch (err) {
+    loading.style.display = "none";
+    alert("Terjadi error!");
+    console.log(err);
+  }
+}
+</script>
+
+</body>
+</html>
