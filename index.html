@@ -3,53 +3,84 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TikTok Downloader Pro</title>
+<title>Downloader Pro</title>
 
 <style>
-body {
+* {
+  box-sizing: border-box;
   font-family: Arial;
-  background: #0f172a;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
   color: white;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
 }
 
-.box {
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 15px;
-  width: 100%;
-  max-width: 400px;
+.container {
+  background: rgba(30,41,59,0.9);
+  padding: 25px;
+  border-radius: 20px;
+  width: 95%;
+  max-width: 420px;
+  backdrop-filter: blur(10px);
+}
+
+h1 {
+  text-align: center;
+  font-size: 22px;
 }
 
 input, select, button {
   width: 100%;
   padding: 12px;
-  margin-top: 10px;
-  border-radius: 10px;
+  margin-top: 12px;
+  border-radius: 12px;
   border: none;
+}
+
+input {
+  background: #0f172a;
+  color: white;
+}
+
+select {
+  background: #0f172a;
+  color: white;
 }
 
 button {
   background: #38bdf8;
   font-weight: bold;
   cursor: pointer;
+  transition: 0.2s;
 }
 
+button:hover {
+  background: #0ea5e9;
+}
+
+#status {
+  margin-top: 10px;
+  font-size: 14px;
+  text-align: center;
+}
 </style>
 </head>
 <body>
 
-<div class="box">
-  <h2>TikTok Downloader</h2>
+<div class="container">
+  <h1>Downloader Pro</h1>
 
-  <input type="text" id="url" placeholder="Masukkan link TikTok">
+  <input type="text" id="url" placeholder="Paste link TikTok / YouTube">
 
   <select id="type">
-    <option value="hd">MP4 HD</option>
-    <option value="normal">MP4 Normal</option>
+    <option value="mp4_hd">MP4 HD</option>
+    <option value="mp4">MP4 Normal</option>
     <option value="mp3">MP3</option>
   </select>
 
@@ -69,78 +100,104 @@ async function download() {
     return;
   }
 
-  status.innerText = "Mengambil dari API...";
+  status.innerText = "Mendeteksi platform...";
 
-  // 🔥 LIST API (fallback)
-  const apis = [
-    `https://api.sxtream.my.id/downloader/tiktok?url=${encodeURIComponent(url)}`,
-    `https://api.sxtream.my.id/downloader/aio-v2?url=${encodeURIComponent(url)}`,
-    `https://chocomilk.amira.us.kg/v1/download/tiktok?url=${encodeURIComponent(url)}`
-  ];
+  const isYT = url.includes("youtube.com") || url.includes("youtu.be");
 
-  let downloadLink = null;
+  let link = null;
 
-  for (let api of apis) {
-    try {
-      const res = await fetch(api);
-      const data = await res.json();
+  try {
 
-      console.log("API RESULT:", data);
+    // =========================
+    // 🎵 YOUTUBE
+    // =========================
+    if (isYT) {
+      status.innerText = "Mengambil YouTube...";
 
-      // =====================
-      // ✅ API 1 & 2 (SXTREAM)
-      // =====================
-      if (data.result) {
+      if (type === "mp3") {
+        const res = await fetch(`https://api.sxtream.my.id/downloader/ytmp3?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        link = data.result?.url;
+      } else {
+        const res = await fetch(`https://api.sxtream.my.id/downloader/ytmp4?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        link = data.result?.url;
+      }
+    }
 
-        // MP3
-        if (type === "mp3" && data.result.music_info?.url) {
-          downloadLink = data.result.music_info.url;
-        }
+    // =========================
+    // 🎥 TIKTOK
+    // =========================
+    else {
+      status.innerText = "Mengambil TikTok...";
 
-        // MP4
-        if (data.result.data) {
-          for (let item of data.result.data) {
-            if (type === "hd" && item.type === "nowatermark_hd") {
-              downloadLink = item.url;
+      const apis = [
+        `https://api.sxtream.my.id/downloader/tiktok?url=${encodeURIComponent(url)}`,
+        `https://api.sxtream.my.id/downloader/aio-v2?url=${encodeURIComponent(url)}`,
+        `https://chocomilk.amira.us.kg/v1/download/tiktok?url=${encodeURIComponent(url)}`
+      ];
+
+      for (let api of apis) {
+        try {
+          const res = await fetch(api);
+          const data = await res.json();
+
+          // 🔥 API SXTREAM
+          if (data.result) {
+
+            // MP3
+            if (type === "mp3" && data.result.music_info?.url) {
+              link = data.result.music_info.url;
+              break;
             }
-            if (type === "normal" && item.type === "nowatermark") {
-              downloadLink = item.url;
+
+            // MP4
+            if (data.result.data) {
+              for (let item of data.result.data) {
+                if (type === "mp4_hd" && item.type === "nowatermark_hd") {
+                  link = item.url;
+                  break;
+                }
+                if (type === "mp4" && item.type === "nowatermark") {
+                  link = item.url;
+                  break;
+                }
+              }
             }
           }
-        }
+
+          // 🔥 API CHOCOMILK
+          if (data.data?.media) {
+            if (type === "mp3" && data.data.media.audio) {
+              link = data.data.media.audio;
+              break;
+            }
+
+            if ((type === "mp4" || type === "mp4_hd") && data.data.media.video) {
+              link = data.data.media.video;
+              break;
+            }
+          }
+
+          if (link) break;
+
+        } catch (e) {}
       }
-
-      // =====================
-      // ✅ API 3 (CHOCOMILK)
-      // =====================
-      if (data.data && data.data.media) {
-
-        if (type === "mp3" && data.data.media.audio) {
-          downloadLink = data.data.media.audio;
-        }
-
-        if (type === "hd" || type === "normal") {
-          downloadLink = data.data.media.video;
-        }
-      }
-
-      // 🔥 kalau udah dapet langsung stop
-      if (downloadLink) break;
-
-    } catch (e) {
-      console.log("API ERROR:", e);
     }
+
+    if (!link) {
+      status.innerText = "Gagal ambil link 😢";
+      return;
+    }
+
+    status.innerText = "Downloading...";
+
+    window.location.href = link;
+
+  } catch (err) {
+    console.log(err);
+    status.innerText = "Error!";
   }
-
-  if (!downloadLink) {
-    status.innerText = "Semua API gagal 😢";
-    return;
-  }
-
-  status.innerText = "Redirecting...";
-
-  // 🚀 langsung download
-  window.location.href = downloadLink;
 }
 </script>
 
