@@ -1,147 +1,108 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>TikTok Downloader</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikTok Downloader</title>
 
-    .container {
-      background: #1e293b;
-      padding: 20px;
-      border-radius: 16px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      text-align: center;
-    }
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
 
-    h1 {
-      margin-bottom: 15px;
-      font-size: 22px;
-    }
+.box {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 15px;
+  width: 100%;
+  max-width: 400px;
+}
 
-    input {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      outline: none;
-      margin-bottom: 10px;
-      font-size: 14px;
-    }
+input, select, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 10px;
+  border: none;
+}
 
-    button {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      background: #38bdf8;
-      color: black;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.2s;
-    }
+button {
+  background: #38bdf8;
+  font-weight: bold;
+}
 
-    button:hover {
-      background: #0ea5e9;
-    }
-
-    .loading {
-      margin-top: 10px;
-      display: none;
-    }
-
-    .result {
-      margin-top: 15px;
-      display: none;
-    }
-
-    video {
-      width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
-
-    a.download-btn {
-      display: block;
-      margin-top: 10px;
-      background: #22c55e;
-      padding: 10px;
-      border-radius: 10px;
-      color: white;
-      text-decoration: none;
-    }
-
-  </style>
+</style>
 </head>
 <body>
 
-<div class="container">
-  <h1>TikTok Downloader</h1>
-  
-  <input type="text" id="url" placeholder="Masukkan link TikTok...">
+<div class="box">
+  <h2>TikTok Downloader</h2>
+
+  <input type="text" id="url" placeholder="Masukkan link TikTok">
+
+  <select id="type">
+    <option value="mp4">MP4 (Video)</option>
+    <option value="mp3">MP3 (Audio)</option>
+  </select>
+
   <button onclick="download()">Download</button>
 
-  <div class="loading" id="loading">Loading...</div>
-
-  <div class="result" id="result">
-    <p id="title"></p>
-    <video id="video" controls></video>
-    <a id="downloadLink" class="download-btn" download>Download Video</a>
-  </div>
+  <p id="status"></p>
 </div>
 
 <script>
 async function download() {
-  const urlInput = document.getElementById("url").value;
-  const loading = document.getElementById("loading");
-  const result = document.getElementById("result");
+  const url = document.getElementById("url").value;
+  const type = document.getElementById("type").value;
+  const status = document.getElementById("status");
 
-  if (!urlInput) {
-    alert("Masukkan link dulu!");
+  if (!url) {
+    alert("Masukkan link!");
     return;
   }
 
-  loading.style.display = "block";
-  result.style.display = "none";
+  status.innerText = "Mengambil data...";
 
   try {
-    const api = `https://api.sxtream.my.id/downloader/tiktok?url=${encodeURIComponent(urlInput)}`;
+    const api = `https://api.sxtream.my.id/downloader/tiktok?url=${encodeURIComponent(url)}`;
     const res = await fetch(api);
     const data = await res.json();
 
-    loading.style.display = "none";
+    console.log(data); // penting buat cek struktur asli
 
-    // sesuaikan dengan struktur response API
-    const videoUrl = data.result?.video || data.result?.nowm || data.result?.play;
+    // ⚠️ INI BAGIAN PENTING (sesuaikan response API kamu)
+    let downloadLink;
 
-    if (!videoUrl) {
-      alert("Gagal ambil video!");
+    if (type === "mp4") {
+      downloadLink =
+        data.result?.video ||
+        data.result?.nowm ||
+        data.result?.play;
+    } else {
+      downloadLink =
+        data.result?.music ||
+        data.result?.audio;
+    }
+
+    if (!downloadLink) {
+      status.innerText = "Link tidak ditemukan!";
       return;
     }
 
-    document.getElementById("video").src = videoUrl;
-    document.getElementById("downloadLink").href = videoUrl;
-    document.getElementById("title").innerText = data.result?.title || "Video TikTok";
+    status.innerText = "Redirecting...";
 
-    result.style.display = "block";
+    // 🚀 langsung redirect download
+    window.location.href = downloadLink;
 
   } catch (err) {
-    loading.style.display = "none";
-    alert("Terjadi error!");
     console.log(err);
+    status.innerText = "Error mengambil data!";
   }
 }
 </script>
